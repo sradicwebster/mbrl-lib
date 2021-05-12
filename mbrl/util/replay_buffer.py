@@ -193,8 +193,8 @@ class ReplayBuffer:
     def __init__(
         self,
         capacity: int,
-        obs_shape: Tuple[int],
-        action_shape: Tuple[int],
+        obs_shape: Tuple[int, ...],
+        action_shape: Tuple[int, ...],
         obs_type=np.float32,
         action_type=np.float32,
         rng: Optional[np.random.Generator] = None,
