@@ -304,7 +304,7 @@ class ReplayBuffer:
             self.cur_idx = (self.cur_idx + 1) % self.capacity
             self.num_stored = min(self.num_stored + 1, self.capacity)
 
-    def sample(self, batch_size: int) -> Sized:
+    def sample(self, batch_size: int) -> TransitionBatch:
         """Samples a batch of transitions from the replay buffer.
 
         Args:

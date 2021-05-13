@@ -187,7 +187,16 @@ class ModelTrainer:
         for batch in dataset:
             avg_batch_score = self.model.eval_score(batch)
             batch_scores_list.append(avg_batch_score)
-        batch_scores = torch.cat(batch_scores_list, axis=batch_scores_list[0].ndim - 2)
+        try:
+            batch_scores = torch.cat(
+                batch_scores_list, axis=batch_scores_list[0].ndim - 2
+            )
+        except RuntimeError as e:
+            print(
+                f"There was an error calling ModelTrainer.evaluate(). "
+                f"Note that model.eval_score() should be non-reduced. Error was: {e}"
+            )
+            raise e
 
         if isinstance(dataset, BootstrapIterator):
             dataset.toggle_bootstrap()
