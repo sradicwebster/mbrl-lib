@@ -189,7 +189,7 @@ class ModelTrainer:
             batch_scores_list.append(avg_batch_score)
         try:
             batch_scores = torch.cat(
-                batch_scores_list, axis=batch_scores_list[0].ndim - 2
+                batch_scores_list, dim=batch_scores_list[0].ndim - 2
             )
         except RuntimeError as e:
             print(
