@@ -420,7 +420,7 @@ def rollout_model_env(
     plan: Optional[np.ndarray] = None,
     agent: Optional[mbrl.planning.Agent] = None,
     num_samples: int = 1,
-    sample: bool = False
+    sample: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Rolls out an environment model.
 
