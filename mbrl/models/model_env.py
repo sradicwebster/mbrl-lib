@@ -139,7 +139,7 @@ class ModelEnv:
         action_sequences: torch.Tensor,
         initial_state: np.ndarray,
         num_particles: int,
-    ) -> torch.Tensor:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Evaluates a batch of action sequences on the model.
 
         Args:
@@ -164,16 +164,18 @@ class ModelEnv:
         self.reset(initial_obs_batch, return_as_np=False)
         batch_size = initial_obs_batch.shape[0]
         total_rewards = torch.zeros(batch_size, 1).to(self.device)
-        terminated = torch.zeros(batch_size, 1, dtype=bool).to(self.device)
+        terminated = torch.zeros(batch_size, 1, dtype=torch.bool).to(self.device)
+        next_obs_all = torch.zeros((horizon,) + initial_obs_batch.shape).to(self.device)
         for time_step in range(horizon):
             actions_for_step = action_sequences[:, time_step, :]
             action_batch = torch.repeat_interleave(
                 actions_for_step, num_particles, dim=0
             )
-            _, rewards, dones, _ = self.step(action_batch, sample=True)
+            next_observs, rewards, dones, _ = self.step(action_batch, sample=False)
+            next_obs_all[time_step, ...] = next_observs
             rewards[terminated] = 0
             terminated |= dones
             total_rewards += rewards
 
         total_rewards = total_rewards.reshape(-1, num_particles)
-        return total_rewards.mean(dim=1)
+        return total_rewards.mean(dim=1), torch.Tensor(initial_state), next_obs_all

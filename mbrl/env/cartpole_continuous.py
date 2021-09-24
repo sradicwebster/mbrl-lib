@@ -156,7 +156,9 @@ class CartPoleEnv(gym.Env):
             self.steps_beyond_done += 1
             reward = 0.0
 
-        return np.array(self.state), reward, done, {}
+        info = {"cost": [1 if theta < -0.5 * self.theta_threshold_radians else 0][0]}
+
+        return np.array(self.state), reward, done, info
 
     def reset(self):
         self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
