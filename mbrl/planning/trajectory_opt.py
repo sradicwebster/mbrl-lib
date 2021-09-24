@@ -24,10 +24,10 @@ class Optimizer:
         pass
 
     def optimize(
-            self,
-            obj_fun: Callable[[torch.Tensor], torch.Tensor],
-            x0: Optional[torch.Tensor] = None,
-            **kwargs,
+        self,
+        obj_fun: Callable[[torch.Tensor], torch.Tensor],
+        x0: Optional[torch.Tensor] = None,
+        **kwargs,
     ) -> torch.Tensor:
         """Runs optimization.
 
@@ -69,17 +69,17 @@ class CEMOptimizer(Optimizer):
     """
 
     def __init__(
-            self,
-            num_iterations: int,
-            elite_ratio: float,
-            population_size: int,
-            lower_bound: Sequence[Sequence[float]],
-            upper_bound: Sequence[Sequence[float]],
-            alpha: float,
-            device: torch.device,
-            return_mean_elites: bool = False,
-            uncertainty_guided: bool = False,
-            beta: float = None
+        self,
+        num_iterations: int,
+        elite_ratio: float,
+        population_size: int,
+        lower_bound: Sequence[Sequence[float]],
+        upper_bound: Sequence[Sequence[float]],
+        alpha: float,
+        device: torch.device,
+        return_mean_elites: bool = False,
+        uncertainty_guided: bool = False,
+        beta: float = None,
     ):
         super().__init__()
         self.num_iterations = num_iterations
@@ -103,11 +103,11 @@ class CEMOptimizer(Optimizer):
         self.step = 0
 
     def optimize(
-            self,
-            obj_fun: Callable[[torch.Tensor], torch.Tensor],
-            x0: Optional[torch.Tensor] = None,
-            callback: Optional[Callable[[torch.Tensor, torch.Tensor, int], None]] = None,
-            **kwargs,
+        self,
+        obj_fun: Callable[[torch.Tensor], torch.Tensor],
+        x0: Optional[torch.Tensor] = None,
+        callback: Optional[Callable[[torch.Tensor, torch.Tensor, int], None]] = None,
+        **kwargs,
     ) -> torch.Tensor:
         """Runs the optimization using CEM.
 
@@ -151,28 +151,41 @@ class CEMOptimizer(Optimizer):
                     self.obs_mean = torch.zeros(len(obs)).to(device=self.device)
                     self.obs_std = 0.1 * torch.ones(len(obs)).to(device=self.device)
                 alpha = 0.01
-                self.obs_mean = (1 - alpha) * self.obs_mean + alpha * next_obs.mean(dim=(0, 1))
-                self.obs_std = (1 - alpha) * self.obs_std + alpha * next_obs.std(dim=(0, 1))
-                next_obs = next_obs.reshape(next_obs.shape[0], self.population_size, -1,
-                                            next_obs.shape[2])
+                self.obs_mean = (1 - alpha) * self.obs_mean + alpha * next_obs.mean(
+                    dim=(0, 1)
+                )
+                self.obs_std = (1 - alpha) * self.obs_std + alpha * next_obs.std(
+                    dim=(0, 1)
+                )
+                next_obs = next_obs.reshape(
+                    next_obs.shape[0], self.population_size, -1, next_obs.shape[2]
+                )
                 next_obs_norm = (next_obs - self.obs_mean) / self.obs_std
                 self.next_obs_std = next_obs_norm.std(dim=2).mean(dim=2)
                 if self.horizon_std is None:
-                    self.horizon_std = 0.01 * torch.ones(mu.shape[0]).to(device=self.device)
-                self.horizon_std = (1 - alpha) * self.horizon_std + \
-                                   alpha * self.next_obs_std.mean(dim=1)
+                    self.horizon_std = 0.01 * torch.ones(mu.shape[0]).to(
+                        device=self.device
+                    )
+                self.horizon_std = (
+                    1 - alpha
+                ) * self.horizon_std + alpha * self.next_obs_std.mean(dim=1)
                 self.next_obs_std /= self.horizon_std.unsqueeze(dim=1)
                 pop_std = self.next_obs_std.mean(dim=0)
 
-                values -= self.beta * pop_std #/ (i + 1)
+                values -= self.beta * pop_std  # / (i + 1)
 
                 if self.step < 0:
                     fig, ax = plt.subplots()
-                    ax.scatter(obs[0], obs[2], marker='X', zorder=2, c="b", s=80)
-                    ax.scatter(next_obs.mean(dim=2)[:, :, 0], next_obs.mean(dim=2)[:, :, 2], s=15,
-                               c=pop_std.unsqueeze(0).repeat(self.next_obs_std.shape[0], 1),
-                               cmap="Reds", vmax=2.75)
-                    ax.plot([-2.4, 2.4], [-0.10472, -0.10472], c='k')
+                    ax.scatter(obs[0], obs[2], marker="X", zorder=2, c="b", s=80)
+                    ax.scatter(
+                        next_obs.mean(dim=2)[:, :, 0],
+                        next_obs.mean(dim=2)[:, :, 2],
+                        s=15,
+                        c=pop_std.unsqueeze(0).repeat(self.next_obs_std.shape[0], 1),
+                        cmap="Reds",
+                        vmax=2.75,
+                    )
+                    ax.plot([-2.4, 2.4], [-0.10472, -0.10472], c="k")
                     ax.set_xlim(-0.03, 0.03)
                     ax.set_ylim(-0.14, -0.06)
 
@@ -215,15 +228,15 @@ class MPPIOptimizer(Optimizer):
     """
 
     def __init__(
-            self,
-            num_iterations: int,
-            population_size: int,
-            gamma: float,
-            sigma: float,
-            beta: float,
-            lower_bound: Sequence[Sequence[float]],
-            upper_bound: Sequence[Sequence[float]],
-            device: torch.device,
+        self,
+        num_iterations: int,
+        population_size: int,
+        gamma: float,
+        sigma: float,
+        beta: float,
+        lower_bound: Sequence[Sequence[float]],
+        upper_bound: Sequence[Sequence[float]],
+        device: torch.device,
     ):
         super().__init__()
         self.planning_horizon = len(lower_bound)
@@ -244,11 +257,11 @@ class MPPIOptimizer(Optimizer):
         self.device = device
 
     def optimize(
-            self,
-            obj_fun: Callable[[torch.Tensor], torch.Tensor],
-            x0: Optional[torch.Tensor] = None,
-            callback: Optional[Callable[[torch.Tensor, torch.Tensor, int], None]] = None,
-            **kwargs,
+        self,
+        obj_fun: Callable[[torch.Tensor], torch.Tensor],
+        x0: Optional[torch.Tensor] = None,
+        callback: Optional[Callable[[torch.Tensor, torch.Tensor, int], None]] = None,
+        **kwargs,
     ) -> torch.Tensor:
         """Implementation of MPPI planner.
         Args:
@@ -285,13 +298,13 @@ class MPPIOptimizer(Optimizer):
 
             # smoothed actions with noise
             population[:, 0, :] = (
-                    self.beta * (self.mean[0, :] + noise[:, 0, :])
-                    + (1 - self.beta) * past_action
+                self.beta * (self.mean[0, :] + noise[:, 0, :])
+                + (1 - self.beta) * past_action
             )
             for i in range(max(self.planning_horizon - 1, 0)):
                 population[:, i + 1, :] = (
-                        self.beta * (self.mean[i + 1] + noise[:, i + 1, :])
-                        + (1 - self.beta) * population[:, i, :]
+                    self.beta * (self.mean[i + 1] + noise[:, i + 1, :])
+                    + (1 - self.beta) * population[:, i, :]
                 )
             # clipping actions
             # This should still work if the bounds between dimensions are different.
@@ -346,21 +359,21 @@ class TrajectoryOptimizer:
     """
 
     def __init__(
-            self,
-            optimizer_cfg: omegaconf.DictConfig,
-            action_lb: np.ndarray,
-            action_ub: np.ndarray,
-            planning_horizon: int,
-            replan_freq: int = 1,
-            keep_last_solution: bool = True,
+        self,
+        optimizer_cfg: omegaconf.DictConfig,
+        action_lb: np.ndarray,
+        action_ub: np.ndarray,
+        planning_horizon: int,
+        replan_freq: int = 1,
+        keep_last_solution: bool = True,
     ):
         optimizer_cfg.lower_bound = np.tile(action_lb, (planning_horizon, 1)).tolist()
         optimizer_cfg.upper_bound = np.tile(action_ub, (planning_horizon, 1)).tolist()
         self.optimizer: Optimizer = hydra.utils.instantiate(optimizer_cfg)
         self.initial_solution = (
             ((torch.tensor(action_lb) + torch.tensor(action_ub)) / 2)
-                .float()
-                .to(optimizer_cfg.device)
+            .float()
+            .to(optimizer_cfg.device)
         )
         self.initial_solution = self.initial_solution.repeat((planning_horizon, 1))
         self.previous_solution = self.initial_solution.clone()
@@ -369,9 +382,9 @@ class TrajectoryOptimizer:
         self.horizon = planning_horizon
 
     def optimize(
-            self,
-            trajectory_eval_fn: Callable[[torch.Tensor], torch.Tensor],
-            callback: Optional[Callable] = None,
+        self,
+        trajectory_eval_fn: Callable[[torch.Tensor], torch.Tensor],
+        callback: Optional[Callable] = None,
     ) -> np.ndarray:
         """Runs the trajectory optimization.
 
@@ -396,7 +409,7 @@ class TrajectoryOptimizer:
             self.previous_solution = best_solution.roll(-self.replan_freq, dims=0)
             # Note that initial_solution[i] is the same for all values of [i],
             # so just pick i = 0
-            self.previous_solution[-self.replan_freq:] = self.initial_solution[0]
+            self.previous_solution[-self.replan_freq :] = self.initial_solution[0]
         return best_solution.cpu().numpy()
 
     def reset(self):
@@ -429,13 +442,13 @@ class TrajectoryOptimizerAgent(Agent):
     """
 
     def __init__(
-            self,
-            optimizer_cfg: omegaconf.DictConfig,
-            action_lb: Sequence[float],
-            action_ub: Sequence[float],
-            planning_horizon: int = 1,
-            replan_freq: int = 1,
-            verbose: bool = False,
+        self,
+        optimizer_cfg: omegaconf.DictConfig,
+        action_lb: Sequence[float],
+        action_ub: Sequence[float],
+        planning_horizon: int = 1,
+        replan_freq: int = 1,
+        verbose: bool = False,
     ):
         self.optimizer = TrajectoryOptimizer(
             optimizer_cfg,
@@ -455,7 +468,7 @@ class TrajectoryOptimizerAgent(Agent):
         self.verbose = verbose
 
     def set_trajectory_eval_fn(
-            self, trajectory_eval_fn: mbrl.types.TrajectoryEvalFnType
+        self, trajectory_eval_fn: mbrl.types.TrajectoryEvalFnType
     ):
         """Sets the trajectory evaluation function.
 
@@ -537,9 +550,9 @@ class TrajectoryOptimizerAgent(Agent):
 
 
 def create_trajectory_optim_agent_for_model(
-        model_env: mbrl.models.ModelEnv,
-        agent_cfg: omegaconf.DictConfig,
-        num_particles: int = 1,
+    model_env: mbrl.models.ModelEnv,
+    agent_cfg: omegaconf.DictConfig,
+    num_particles: int = 1,
 ) -> TrajectoryOptimizerAgent:
     """Utility function for creating a trajectory optimizer agent for a model environment.
 
