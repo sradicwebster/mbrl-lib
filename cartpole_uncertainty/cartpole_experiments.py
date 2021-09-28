@@ -152,51 +152,7 @@ def run():
         ax2.set_xlabel("Cart position")
         fig.show()
 
-    if run_cartpole_episodes:
-        seeds = 3
-        num_trials = 20
-        betas = [0, 0.1, 0.2]
-        all_rewards = np.zeros((len(betas), seeds, num_trials))
-        all_costs = np.zeros((len(betas), seeds, num_trials))
-        for seed in range(seeds):
-            env.seed(seed)
-            for i, beta in enumerate(betas):
-                agent.optimizer.optimizer.beta = beta
-                for trial in range(num_trials):
-                    obs = env.reset()
-                    agent.reset()
-                    done = False
-                    total_reward = 0.0
-                    total_cost = 0.0
-                    steps_trial = 0
-                    while not done:
-                        action = agent.act(obs)
-                        next_obs, reward, done, info = env.step(action)
-                        obs = next_obs
-                        total_reward += reward
-                        total_cost += info["cost"]
-                        steps_trial += 1
-                        if steps_trial == 200:
-                            break
-                    all_rewards[i, seed, trial] = total_reward
-                    all_costs[i, seed, trial] = total_cost
-                print(f"Beta = {beta}, Seed = {seed}, Ave reward = {all_rewards[i, seed, :].mean()},"
-                      f" Ave cost {all_costs[i, seed, :].mean()}")
-
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-        ax1.plot(np.tile(np.linspace(1, num_trials, num_trials).reshape(-1, 1), (1, len(betas))),
-                 all_rewards.mean(1).T, label=betas)
-        ax2.plot(np.tile(np.linspace(1, num_trials, num_trials).reshape(-1, 1), (1, len(betas))),
-                 all_costs.mean(1).T, label=betas)
-        ax1.set_xlabel("Episode"), ax2.set_xlabel("Episode")
-        ax1.set_ylabel("Reward"), ax2.set_ylabel("Time steps spent in no data region")
-        ax2.legend(title=r"$\beta$")
-        ax1.set_xlim(1, num_trials), ax2.set_xlim(1, num_trials)
-        ax1.set_xticks(np.arange(2, num_trials + 1, 2))
-        ax2.set_xticks(np.arange(2, num_trials + 1, 2))
-        ax1.set_ylim(0, 200), ax2.set_ylim(0, 200)
-        fig.show()
-
+    # change line 177 on mbrl/planning/trajectory_opt
     if rollout_from_threshold:
         agent.optimizer.keep_last_solution = False
         obs = np.array([0, 0, -env.theta_threshold_radians/2, 0])
@@ -204,7 +160,6 @@ def run():
 
 
 if __name__ == "__main__":
-    plot_cartpole_uncertainty_heatmap = False
-    run_cartpole_episodes = True
+    plot_cartpole_uncertainty_heatmap = True
     rollout_from_threshold = False
     run()

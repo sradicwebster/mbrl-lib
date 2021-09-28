@@ -172,7 +172,7 @@ class CEMOptimizer(Optimizer):
                 self.next_obs_std /= self.horizon_std.unsqueeze(dim=1)
                 pop_std = self.next_obs_std.mean(dim=0)
 
-                values -= self.beta * pop_std  # / (i + 1)
+                values -= self.beta * pop_std / (i + 1)
 
                 if self.step < 0:
                     fig, ax = plt.subplots()
