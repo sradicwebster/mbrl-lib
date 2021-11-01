@@ -98,6 +98,8 @@ class CartPoleEnv(gym.Env):
 
         self.steps_beyond_done = None
 
+        self.unsafe_obs = None
+
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
@@ -156,7 +158,9 @@ class CartPoleEnv(gym.Env):
             self.steps_beyond_done += 1
             reward = 0.0
 
-        info = {"cost": [1 if theta < -0.5 * self.theta_threshold_radians else 0][0]}
+        info = {}
+        if self.unsafe_obs is not None:
+            info = {"cost": [1 if self.unsafe_obs(np.array(self.state)) else 0][0]}
 
         return np.array(self.state), reward, done, info
 

@@ -9,9 +9,10 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 from omegaconf import OmegaConf
+import argparse
 
 
-def run():
+def run(plot_cartpole_uncertainty_heatmap, rollout_from_threshold):
     seed = 0
     env = cartpole_env.CartPoleEnv()
     theta_threshold = -0.5 * env.theta_threshold_radians
@@ -160,6 +161,8 @@ def run():
 
 
 if __name__ == "__main__":
-    plot_cartpole_uncertainty_heatmap = True
-    rollout_from_threshold = False
-    run()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--heatmap", type=bool, default=False)
+    parser.add_argument("--rollout", type=bool, default=False)
+    args = parser.parse_args()
+    run(args.heatmap, args.rollout)

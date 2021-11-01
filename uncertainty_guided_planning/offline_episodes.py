@@ -1,4 +1,5 @@
 import mbrl.env.cartpole_continuous as cartpole_env
+import mbrl.env.pendulum as pendulum_env
 import mbrl.env.reward_fns as reward_fns
 import mbrl.env.termination_fns as termination_fns
 import mbrl.models as models
@@ -8,14 +9,10 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 from omegaconf import OmegaConf
+import argparse
 
 
-def run():
-    env = cartpole_env.CartPoleEnv()
-    theta_threshold = -0.5 * env.theta_threshold_radians
-    reward_fn = reward_fns.cartpole
-    term_fn = termination_fns.cartpole
-    device = 'cpu'
+def run(env, reward_fn, term_fn, num_seeds, num_trials, max_steps, betas, device):
     obs_shape = env.observation_space.shape
     act_shape = env.action_space.shape
 
@@ -40,7 +37,7 @@ def run():
             "normalize": True
         },
         "overrides": {
-            "trial_length": 200,
+            "trial_length": max_steps,
             "num_steps": 10000,  # size of replay buffer
             "model_batch_size": 32,
             "validation_ratio": 0.05
@@ -65,17 +62,14 @@ def run():
 
             replay_buffer = common_util.create_replay_buffer(cfg, obs_shape, act_shape, rng=rng)
 
-            def cartpole_safe(obs, action, next_obs, reward, done):
-                return obs[2] > theta_threshold and next_obs[2] > theta_threshold
-
             common_util.rollout_agent_trajectories(
                 env,
                 replay_buffer.capacity,
                 planning.RandomAgent(env),
                 {},
-                trial_length=200,
+                trial_length=max_steps,
                 replay_buffer=replay_buffer,
-                condition=cartpole_safe,
+                condition=lambda obs: not env.unsafe_obs(obs),
             )
 
             dynamics_model.update_normalizer(replay_buffer.get_all())
@@ -136,14 +130,13 @@ def run():
                     total_reward += reward
                     total_cost += info["cost"]
                     steps_trial += 1
-                    if steps_trial == 200:
+                    if steps_trial == max_steps:
                         break
                 all_rewards[b, s, trial] = total_reward
                 all_costs[b, s, trial] = total_cost
             print(f"Beta = {beta}, Seed = {seed}, Ave reward = {all_rewards[b, s, :].mean()},"
                   f" Ave cost {all_costs[b, s, :].mean()}")
 
-    print('hi')
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
     episodes = np.tile(np.linspace(1, num_trials, num_trials).reshape(-1, 1), (1, len(betas)))
     reward_mean = all_rewards.mean(1).T
@@ -164,12 +157,42 @@ def run():
     ax1.set_xlim(1, num_trials), ax2.set_xlim(1, num_trials)
     ax1.set_xticks(np.arange(2, num_trials + 1, 2))
     ax2.set_xticks(np.arange(2, num_trials + 1, 2))
-    ax1.set_ylim(0, 200), ax2.set_ylim(0, 200)
+    #ax1.set_ylim(0, 200), ax2.set_ylim(0, 200)
     fig.show()
 
 
 if __name__ == "__main__":
-    num_seeds = 3
-    num_trials = 10
-    betas = [0, 0.2, 0.3]
-    run()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--env", type=str)
+    parser.add_argument("--num_seeds", type=int, default=3)
+    parser.add_argument("--num_trials", type=int, default=1)
+    parser.add_argument("--max_steps", type=int, default=200)
+    parser.add_argument("--betas", type=str, default="0, 0.2, 0.3")
+    parser.add_argument("--device", type=str, default="cpu")
+    args = parser.parse_args()
+    betas = [float(item) for item in args.betas.split(',')]
+
+    if args.env == "cartpole":
+        env = cartpole_env.CartPoleEnv()
+        reward_fn = reward_fns.cartpole
+        term_fn = termination_fns.cartpole
+
+        unsafe_obs = lambda obs: obs[2] < -0.5 * env.theta_threshold_radians
+
+    elif args.env == "pendulum":
+        env = pendulum_env.PendulumEnv()
+        reward_fn = reward_fns.inverted_pendulum
+        term_fn = termination_fns.inverted_pendulum
+
+        def unsafe_obs(obs):
+            theta = np.arccos(obs[0])
+            if obs[1] < 0: theta *= -1
+            return -3/4 * np.pi < theta < -1/4 * np.pi
+
+    else:
+        raise Exception("Only cartpole and pendulum environments implemented.")
+
+    env.unsafe_obs = unsafe_obs
+
+    run(env, reward_fn, term_fn, args.num_seeds, args.num_trials, args.max_steps, betas,
+        args.device)

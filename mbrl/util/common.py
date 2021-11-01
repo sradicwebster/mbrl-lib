@@ -464,7 +464,7 @@ def rollout_agent_trajectories(
     trial_length: Optional[int] = None,
     callback: Optional[Callable] = None,
     replay_buffer: Optional[ReplayBuffer] = None,
-    condition: Optional[Callable] = lambda obs, action, next_obs, reward, done: True,
+    condition: Optional[Callable] = lambda obs: True,
     collect_full_trajectories: bool = False,
 ) -> List[float]:
     """Rollout agent trajectories in the given environment.
@@ -531,7 +531,7 @@ def rollout_agent_trajectories(
                 next_obs, reward, done, info = env.step(action)
                 if callback:
                     callback((obs, action, next_obs, reward, done))
-            if condition(obs, action, next_obs, reward, done):
+            if condition(obs):
                 step += 1
             obs = next_obs
             total_reward += reward
@@ -556,7 +556,7 @@ def step_env_and_add_to_buffer(
     agent_kwargs: Dict,
     replay_buffer: ReplayBuffer,
     callback: Optional[Callable] = None,
-    condition: Optional[Callable] = lambda obs, action, next_obs, reward, done: True,
+    condition: Optional[Callable] = lambda obs: True,
 ) -> Tuple[np.ndarray, np.ndarray, float, bool, Dict]:
     """Steps the environment with an agent's action and populates the replay buffer.
 
@@ -579,7 +579,7 @@ def step_env_and_add_to_buffer(
     """
     action = agent.act(obs, **agent_kwargs)
     next_obs, reward, done, info = env.step(action)
-    if condition(obs, action, next_obs, reward, done):
+    if condition(obs):
         replay_buffer.add(obs, action, next_obs, reward, done)
     if callback:
         callback((obs, action, next_obs, reward, done))
