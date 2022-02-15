@@ -68,6 +68,8 @@ class OneDTransitionRewardModel(Model):
         num_elites (int, optional): if provided, only the best ``num_elites`` models according
             to validation score are used when calling :meth:`predict`. Defaults to
             ``None`` which means that all models will always be included in the elite set.
+        backward (bool, optional): if ``True`` model the backward transition dynamics:
+            s_{t+1}, a_t -> s_t
     """
 
     def __init__(
@@ -80,6 +82,7 @@ class OneDTransitionRewardModel(Model):
         obs_process_fn: Optional[mbrl.types.ObsProcessFnType] = None,
         no_delta_list: Optional[List[int]] = None,
         num_elites: Optional[int] = None,
+        backward: Optional[bool] = False
     ):
         super().__init__(model.device)
         self.model = model
@@ -99,6 +102,7 @@ class OneDTransitionRewardModel(Model):
         self.num_elites = num_elites
         if not num_elites and isinstance(self.model, Ensemble):
             self.num_elites = self.model.num_members
+        self.backward = backward
 
     def _get_model_input(
         self,
@@ -119,15 +123,24 @@ class OneDTransitionRewardModel(Model):
         self, batch: mbrl.types.TransitionBatch, _as_float: bool = False
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         obs, action, next_obs, reward, _ = batch.astuple()
-        if self.target_is_delta:
-            target_obs = next_obs - obs
-            for dim in self.no_delta_list:
-                target_obs[..., dim] = next_obs[..., dim]
+        if not self.backward:
+            if self.target_is_delta:
+                target_obs = next_obs - obs
+                for dim in self.no_delta_list:
+                    target_obs[..., dim] = next_obs[..., dim]
+            else:
+                target_obs = next_obs
+            model_in = self._get_model_input(obs, action)
         else:
-            target_obs = next_obs
+            if self.target_is_delta:
+                target_obs = obs - next_obs
+                for dim in self.no_delta_list:
+                    target_obs[..., dim] = obs[..., dim]
+            else:
+                target_obs = obs
+            model_in = self._get_model_input(next_obs, action)
         target_obs = model_util.to_tensor(target_obs).to(self.device)
 
-        model_in = self._get_model_input(obs, action)
         if self.learned_rewards:
             reward = model_util.to_tensor(reward).to(self.device).unsqueeze(reward.ndim)
             target = torch.cat([target_obs, reward], dim=obs.ndim - 1)
